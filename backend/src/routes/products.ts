@@ -14,7 +14,7 @@ const createProductSchema = z.object({
 router.get("/", async (_req, res, next) => {
   try {
     const products = await prisma.product.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: { name: "asc" },
     });
     res.json({ success: true, data: products });
   } catch (err) {

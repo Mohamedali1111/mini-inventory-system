@@ -168,6 +168,19 @@ export function renderApp(root: HTMLDivElement) {
       return;
     }
 
+    if (type === "transfer" && fromWarehouseInput && toWarehouseInput) {
+      if (!fromWarehouseInput.value || !toWarehouseInput.value) {
+        error = "Please select both source and target warehouses";
+        render();
+        return;
+      }
+      if (fromWarehouseInput.value === toWarehouseInput.value) {
+        error = "Source and target warehouses must be different";
+        render();
+        return;
+      }
+    }
+
     try {
       isLoading = true;
       error = null;
@@ -202,12 +215,18 @@ export function renderApp(root: HTMLDivElement) {
       } else {
         render();
       }
-      if (type === "add") {
-        success = "Stock added";
-      } else if (type === "remove") {
-        success = "Stock removed";
-      } else {
-        success = "Stock transferred";
+      const warehouseMap = new Map(state.warehouses.map((w) => [w.id, w.name]));
+
+      if (type === "add" && warehouseInput) {
+        const name = warehouseMap.get(warehouseInput.value) ?? "warehouse";
+        success = `Added ${quantity} to ${name}`;
+      } else if (type === "remove" && warehouseInput) {
+        const name = warehouseMap.get(warehouseInput.value) ?? "warehouse";
+        success = `Removed ${quantity} from ${name}`;
+      } else if (type === "transfer" && fromWarehouseInput && toWarehouseInput) {
+        const fromName = warehouseMap.get(fromWarehouseInput.value) ?? "source warehouse";
+        const toName = warehouseMap.get(toWarehouseInput.value) ?? "target warehouse";
+        success = `Transferred ${quantity} from ${fromName} to ${toName}`;
       }
     } catch (e) {
       error = e instanceof Error ? e.message : "Stock operation failed";
@@ -220,6 +239,11 @@ export function renderApp(root: HTMLDivElement) {
 
   function render() {
     const selectedProduct = state.products.find((p) => p.id === state.selectedProductId) ?? null;
+    const sortedProducts = [...state.products].sort((a, b) => a.name.localeCompare(b.name));
+    const totalStock =
+      selectedProduct && state.productInventory.length > 0
+        ? state.productInventory.reduce((sum, inv) => sum + inv.quantity, 0)
+        : 0;
 
     root.innerHTML = `
       <div class="app">
@@ -230,7 +254,7 @@ export function renderApp(root: HTMLDivElement) {
 
         <main class="layout">
           <section class="panel">
-            <h2>Products</h2>
+            <h2>1. Products</h2>
             <form id="create-product-form" class="form">
               <div class="form-row">
                 <label>SKU</label>
@@ -248,7 +272,7 @@ export function renderApp(root: HTMLDivElement) {
             </form>
 
             <ul class="list">
-              ${state.products
+              ${sortedProducts
                 .map(
                   (p) => `
                 <li class="list-item ${p.id === state.selectedProductId ? "selected" : ""}" data-product-id="${p.id}">
@@ -264,7 +288,7 @@ export function renderApp(root: HTMLDivElement) {
           </section>
 
           <section class="panel">
-            <h2>Warehouses</h2>
+            <h2>2. Warehouses</h2>
             <form id="create-warehouse-form" class="form">
               <div class="form-row">
                 <label>Name</label>
@@ -294,7 +318,7 @@ export function renderApp(root: HTMLDivElement) {
           </section>
 
           <section class="panel">
-            <h2>Inventory & Stock</h2>
+            <h2>3. Inventory & Stock</h2>
             ${error ? `<p class="status error inline-error">${error}</p>` : ""}
             ${
               selectedProduct
@@ -302,6 +326,7 @@ export function renderApp(root: HTMLDivElement) {
               <div class="inventory-header">
                 <h3>${selectedProduct.name}</h3>
                 <p class="secondary">SKU: ${selectedProduct.sku}</p>
+                <p class="secondary total-stock">Total stock: ${totalStock}</p>
               </div>
               <div class="inventory-table">
                 <div class="inventory-row header">
@@ -315,12 +340,21 @@ export function renderApp(root: HTMLDivElement) {
                           (inv) => `
                       <div class="inventory-row">
                         <div>${inv.warehouseName}</div>
-                        <div>${inv.quantity}</div>
+                        <div>
+                          ${inv.quantity}
+                          ${
+                            inv.quantity === 0
+                              ? "<span class='badge badge-muted'>0 stock</span>"
+                              : inv.quantity <= 5
+                                ? "<span class='badge badge-warn'>Low</span>"
+                                : ""
+                          }
+                        </div>
                       </div>
                     `,
                         )
                         .join("")
-                    : "<p class='empty'>No stock for this product yet.</p>"
+                    : "<p class='empty'>No stock for this product yet. Use the forms below to add stock.</p>"
                 }
               </div>
 
