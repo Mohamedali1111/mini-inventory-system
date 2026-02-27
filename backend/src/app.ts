@@ -1,7 +1,7 @@
 import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
-import pinoHttp from "pino-http";
+import { httpLogger } from "./logger";
 
 export function createApp() {
   const app = express();
@@ -13,17 +13,14 @@ export function createApp() {
     }),
   );
   app.use(express.json());
-  app.use(
-    pinoHttp({
-      transport: {
-        target: "pino-pretty",
-        options: { colorize: true },
-      },
-    }),
-  );
+  app.use(httpLogger);
 
   app.get("/health", (_req: Request, res: Response) => {
-    res.json({ status: "ok" });
+    res.json({
+      status: "ok",
+      service: "mini-inventory-backend",
+      timestamp: new Date().toISOString(),
+    });
   });
 
   // TODO: mount API routes here, e.g. /api/products
@@ -31,9 +28,18 @@ export function createApp() {
   // Global error handler
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-    // pino-http adds `log` on req
     (req as any).log?.error({ err }, "Unhandled error");
-    res.status(500).json({ message: "Internal server error" });
+
+    const status = res.statusCode >= 400 ? res.statusCode : 500;
+    const isProd = process.env.NODE_ENV === "production";
+
+    res.status(status).json({
+      success: false,
+      error: {
+        code: status === 500 ? "INTERNAL_SERVER_ERROR" : "UNHANDLED_ERROR",
+        message: isProd ? "Internal server error" : err.message,
+      },
+    });
   });
 
   return app;
