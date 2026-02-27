@@ -29,11 +29,13 @@ export function renderApp(root: HTMLDivElement) {
   let state: State = { ...initialState };
   let isLoading = false;
   let error: string | null = null;
+  let success: string | null = null;
 
   async function loadInitialData() {
     try {
       isLoading = true;
       error = null;
+      success = null;
       render();
 
       const [products, warehouses] = await Promise.all([listProducts(), listWarehouses()]);
@@ -56,6 +58,7 @@ export function renderApp(root: HTMLDivElement) {
     try {
       isLoading = true;
       error = null;
+      success = null;
       render();
 
       const inventoryResponse = await getProductInventory(productId);
@@ -82,6 +85,7 @@ export function renderApp(root: HTMLDivElement) {
     try {
       isLoading = true;
       error = null;
+      success = null;
       render();
 
       const product = await createProduct({
@@ -104,6 +108,7 @@ export function renderApp(root: HTMLDivElement) {
       } else {
         render();
       }
+      success = "Product created";
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to create product";
       render();
@@ -120,6 +125,7 @@ export function renderApp(root: HTMLDivElement) {
     try {
       isLoading = true;
       error = null;
+      success = null;
       render();
 
       const warehouse = await createWarehouse({
@@ -135,6 +141,7 @@ export function renderApp(root: HTMLDivElement) {
       nameInput.value = "";
       locationInput.value = "";
       render();
+      success = "Warehouse created";
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to create warehouse";
       render();
@@ -164,6 +171,7 @@ export function renderApp(root: HTMLDivElement) {
     try {
       isLoading = true;
       error = null;
+      success = null;
       render();
 
       if (type === "add" && warehouseInput) {
@@ -193,6 +201,13 @@ export function renderApp(root: HTMLDivElement) {
         await selectProduct(state.selectedProductId);
       } else {
         render();
+      }
+      if (type === "add") {
+        success = "Stock added";
+      } else if (type === "remove") {
+        success = "Stock removed";
+      } else {
+        success = "Stock transferred";
       }
     } catch (e) {
       error = e instanceof Error ? e.message : "Stock operation failed";
@@ -280,6 +295,7 @@ export function renderApp(root: HTMLDivElement) {
 
           <section class="panel">
             <h2>Inventory & Stock</h2>
+            ${error ? `<p class="status error inline-error">${error}</p>` : ""}
             ${
               selectedProduct
                 ? `
@@ -348,7 +364,7 @@ export function renderApp(root: HTMLDivElement) {
 
         <footer class="app-footer">
           ${isLoading ? "<span class='status'>Loading...</span>" : ""}
-          ${error ? `<span class='status error'>${error}</span>` : ""}
+          ${success ? `<span class='status'>${success}</span>` : ""}
         </footer>
       </div>
     `;
@@ -400,6 +416,11 @@ export function renderApp(root: HTMLDivElement) {
         void handleStockAction(stockTransferForm, "transfer", { productId: state.selectedProductId! });
       };
     }
+
+    const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>("button"));
+    buttons.forEach((btn) => {
+      btn.disabled = isLoading;
+    });
   }
 
   void loadInitialData();
