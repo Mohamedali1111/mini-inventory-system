@@ -63,4 +63,7 @@ The API will start on the port from `PORT` (default `4000`).
 - The schema uses Prisma models for `Product`, `Warehouse`, `Inventory`, and `StockMovement` (for logging stock changes).
 - `Inventory` enforces a unique `(productId, warehouseId)` pair per row.
 - `StockMovement` tracks `ADD`, `REMOVE`, and `TRANSFER` operations for auditing.
+- Products include a unique `sku` field as a human-readable identifier in addition to the internal ID.
+- The `GET /api/products/:id/inventory` endpoint currently returns only warehouses that have an `Inventory` row; warehouses with zero stock are omitted. This keeps the payload small and is easy to adapt later if a “show all warehouses with 0” view is needed.
+
 

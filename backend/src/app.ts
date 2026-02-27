@@ -2,6 +2,10 @@ import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { httpLogger } from "./logger";
+import { productsRouter } from "./routes/products";
+import { warehousesRouter } from "./routes/warehouses";
+import { inventoryRouter } from "./routes/inventory";
+import { AppError } from "./errors";
 
 export function createApp() {
   const app = express();
@@ -23,21 +27,30 @@ export function createApp() {
     });
   });
 
-  // TODO: mount API routes here, e.g. /api/products
+  app.use("/api/products", productsRouter);
+  app.use("/api/warehouses", warehousesRouter);
+  app.use("/api", inventoryRouter);
+
+  // 404 for unknown API routes
+  app.use("/api", (_req, _res, next) => {
+    next(new AppError(404, "NOT_FOUND", "Route not found"));
+  });
 
   // Global error handler
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     (req as any).log?.error({ err }, "Unhandled error");
 
-    const status = res.statusCode >= 400 ? res.statusCode : 500;
+    const isAppError = err instanceof AppError;
+    const status = isAppError ? (err as AppError).statusCode : 500;
+    const code = isAppError ? (err as AppError).code : "INTERNAL_SERVER_ERROR";
     const isProd = process.env.NODE_ENV === "production";
 
     res.status(status).json({
       success: false,
       error: {
-        code: status === 500 ? "INTERNAL_SERVER_ERROR" : "UNHANDLED_ERROR",
-        message: isProd ? "Internal server error" : err.message,
+        code,
+        message: isProd && !isAppError ? "Internal server error" : err.message,
       },
     });
   });
