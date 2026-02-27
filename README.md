@@ -56,6 +56,7 @@ From the repository root:
 - `PORT` – API port (default `4000`)
 - `DATABASE_URL` – PostgreSQL connection string (matches `docker-compose.yml` by default)
 - `LOG_LEVEL` – pino log level (default `info`)
+- `API_AUTH_TOKEN` – optional static API token; when set, all `/api/*` routes require header `x-api-token: <value>`
 
 **Frontend (`frontend/.env`):**
 
@@ -180,4 +181,18 @@ Error responses are normalized:
 - **Stock movement logging** via the `StockMovement` table.
 - **Database migrations** checked in via Prisma.
 - **Dockerized Postgres** for easy local setup.
+
+---
+
+### Tests
+
+The backend includes a small Vitest-based test suite that exercises stock transfer logic end-to-end (including database writes and error handling).
+
+To run the tests:
+
+```bash
+docker compose up -d db
+cd backend
+npm test
+```
 

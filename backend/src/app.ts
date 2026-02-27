@@ -6,6 +6,7 @@ import { productsRouter } from "./routes/products";
 import { warehousesRouter } from "./routes/warehouses";
 import { inventoryRouter } from "./routes/inventory";
 import { AppError } from "./errors";
+import { authMiddleware } from "./auth";
 
 export function createApp() {
   const app = express();
@@ -26,6 +27,9 @@ export function createApp() {
       timestamp: new Date().toISOString(),
     });
   });
+
+  // Protect API routes with optional token-based auth.
+  app.use("/api", authMiddleware);
 
   app.use("/api/products", productsRouter);
   app.use("/api/warehouses", warehousesRouter);
